@@ -1,26 +1,35 @@
 # common/auth.py
+import time
 import jwt
-import datetime
-from config import SECRET_KEY, TOKEN_EXPIRATION_SECONDS
+import config
 
-class AuthService:
-    def __init__(self):
-        self.secret_key = SECRET_KEY
-        self.expiration = TOKEN_EXPIRATION_SECONDS
+class TokenManager:
+    """Manage simple JWT creation and verification for node authentication.
 
-    def generate_token(self, node_id):
-        payload = {
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=self.expiration),
-            'iat': datetime.datetime.utcnow(),
-            'sub': node_id
-        }
-        return jwt.encode(payload, self.secret_key, algorithm='HS256')
+    create_jwt(payload, exp_seconds=None):
+        - Builds a JWT by attaching an expiration timestamp to the payload.
+        - Uses SECRET_KEY from config to sign the token.
+        - Explains that the payload should include node-identifying info.
 
-    def validate_token(self, token):
-        try:
-            payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
-            return {'valid': True, 'node_id': payload['sub']}
-        except jwt.ExpiredSignatureError:
-            return {'valid': False, 'error': 'Token expirado'}
-        except jwt.InvalidTokenError:
-            return {'valid': False, 'error': 'Token inválido'}
+    verify_jwt(token):
+        - Verifies token signature and expiration.
+        - Returns the decoded payload on success or raises jwt exceptions on failure.
+    """
+
+    def __init__(self, secret=None):
+        self.secret = secret or config.SECRET_KEY
+
+    def create_jwt(self, payload, exp_seconds=None):
+        # Attach expiration to the payload so receivers can check token freshness.
+        exp = int(time.time()) + (exp_seconds if exp_seconds is not None else config.TOKEN_EXPIRATION_SECONDS)
+        data = payload.copy()
+        data['exp'] = exp
+        # Sign the token and return it. Consumers must verify signature and exp.
+        token = jwt.encode(data, self.secret, algorithm='HS256')
+        return token
+
+    def verify_jwt(self, token):
+        # Verify signature and expiration; jwt.decode will raise on invalid/expired tokens.
+        decoded = jwt.decode(token, self.secret, algorithms=['HS256'])
+        # Additional payload checks (issuer, audience) can be added here.
+        return decoded

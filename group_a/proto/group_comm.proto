@@ -3,22 +3,11 @@ syntax = "proto3";
 
 package group_a;
 
-service GroupComms {
-    // Comunicação geral
-    rpc SendMessage(MessageRequest) returns (MessageReply);
-
-    // Algoritmo de Eleição Bully
-    rpc Election(ElectionMessage) returns (ResponseMessage);
-    rpc Victory(VictoryMessage) returns (ResponseMessage);
-    
-    // Heartbeat
-    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
-}
-
 message MessageRequest {
     int32 sender_id = 1;
     string message = 2;
     int64 lamport_time = 3;
+    string client_version = 4; // New field with client version info
 }
 
 message MessageReply {
@@ -30,7 +19,7 @@ message ElectionMessage {
     int32 candidate_id = 1;
 }
 
-message VictoryMessage {
+message NewLeaderMessage { // renamed from VictoryMessage
     int32 leader_id = 1;
 }
 
@@ -44,4 +33,11 @@ message HeartbeatRequest {
 
 message HeartbeatResponse {
     bool alive = 1;
+}
+
+service GroupAService { // renamed from GroupComms
+    rpc SendMessage (MessageRequest) returns (MessageReply);
+    rpc Election (ElectionMessage) returns (ResponseMessage);
+    rpc NewLeader (NewLeaderMessage) returns (ResponseMessage);
+    rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
 }

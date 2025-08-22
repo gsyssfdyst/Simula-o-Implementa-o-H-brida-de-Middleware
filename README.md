@@ -1,70 +1,87 @@
-# Simulação de Sistema Distribuído
+Markdown
 
-Este projeto implementa uma simulação de sistema distribuído conforme especificado na atividade da disciplina de Sistemas Distribuídos. A simulação inclui dois grupos de processos com diferentes tecnologias de middleware, algoritmos de eleição, detecção de falhas e comunicação multigrupo.
+# Simulação Avançada de Sistema Distribuído Híbrido
 
-## Estrutura do Projeto
+Este projeto é uma simulação acadêmica de um sistema distribuído complexo, projetado para explorar conceitos avançados de comunicação, liderança, tolerância a falhas e segurança em ambientes distribuídos. A arquitetura implementa um modelo híbrido, onde dois grupos de nós operam com diferentes tecnologias de middleware e algoritmos de eleição, coordenados para funcionar como um sistema coeso.
 
-```
+## Conceitos e Tecnologias Implementadas
 
+- **Middleware Híbrido**:
+    - [cite_start]**Grupo A**: Utiliza **gRPC** para comunicação de alta performance baseada em RPCs. [cite: 38]
+    - [cite_start]**Grupo B**: Utiliza **Pyro5** para uma abordagem flexível de RMI (Remote Method Invocation). [cite: 39]
+- **Algoritmos de Eleição de Líder**:
+    - [cite_start]**Grupo A**: Implementa o algoritmo **Bully**, onde nós com IDs mais altos se impõem como líderes. [cite: 59]
+    - [cite_start]**Grupo B**: Implementa o algoritmo em **Anel**, onde uma mensagem de eleição circula entre os nós para determinar o novo líder. [cite: 60]
+- **Sincronização Temporal**:
+    - [cite_start]Todos os eventos e mensagens no sistema são marcados com o tempo lógico utilizando **Relógios de Lamport**, garantindo uma ordenação causal parcial dos eventos. [cite: 35]
+- **Detecção de Falhas e Tolerância**:
+    - [cite_start]Um mecanismo de **Heartbeat** é usado para monitorar a atividade dos líderes. [cite: 66]
+    - [cite_start]O sistema reage automaticamente a falhas, acionando um novo processo de eleição após 3 falhas de heartbeat consecutivas. [cite: 67, 68]
+- **Segurança e Autenticação**:
+    - [cite_start]A comunicação é protegida por um sistema de **autenticação baseado em token JWT**, com tempo de expiração para validar as sessões. [cite: 73, 74]
+- **Comunicação Multigrupo**:
+    - [cite_start]**Intra-grupo**: A comunicação dentro de cada grupo é gerenciada pelas respectivas tecnologias de middleware (gRPC e Pyro5). [cite: 33]
+    - [cite_start]**Inter-grupo**: A infraestrutura para comunicação entre os grupos via **UDP Multicast** está implementada em `common/multicast.py`. [cite: 34]
 
-├── group\_a/
-│   ├── **init**.py
-│   ├── node\_a.py
-│   └── proto/
-│       ├── **init**.py
-│       ├── group\_comm.proto
-│       └── group\_comm\_pb2\_grpc.py
-│       └── group\_comm\_pb2.py
-├── group\_b/
-│   ├── **init**.py
-│   ├── node\_b.py
-├── common/
-│   ├── **init**.py
+## Estrutura dos Diretórios
+
+O projeto está organizado de forma modular para separar as responsabilidades de cada componente:
+
+.
+├── common/             # Módulos compartilhados (lógica de Lamport, autenticação, etc.)
 │   ├── auth.py
-│   ├── lamport\_clock.py
-│   └── multicast.py
-├── config.py
-├── requirements.txt
-└── README.md
+│   └── lamport_clock.py
+├── group_a/            # Implementação do Grupo A (gRPC e Bully)
+│   ├── node_a.py
+│   └── proto/
+│       ├── group_comm.proto
+│       ├── group_comm_pb2.py
+│       └── group_comm_pb2_grpc.py
+├── group_b/            # Implementação do Grupo B (Pyro5 e Anel)
+│   └── node_b.py
+├── config.py           # Arquivo de configuração central
+├── requirements.txt    # Dependências do projeto
+└── README.md           # Esta documentação
 
-````
 
-## Pré-requisitos
+## Guia de Instalação e Execução
 
-- Python 3.8+
-- Bibliotecas listadas em `requirements.txt`. [cite_start]A linguagem permitida é Python.
+### Pré-requisitos
+- Python 3.8 ou superior.
+- As bibliotecas listadas no arquivo `requirements.txt`.
 
-## Instalação
+### Passos para Instalação
 
-1.  Clone o repositório ou salve todos os arquivos na estrutura de diretórios descrita.
-2.  Instale as dependências:
+1.  **Clone o Repositório**:
+    Faça o download de todos os arquivos mantendo a estrutura de diretórios acima.
+
+2.  **Instale as Dependências**:
+    Navegue até o diretório raiz do projeto e execute:
     ```bash
     pip install -r requirements.txt
     ```
-3.  Compile os arquivos de protocolo do gRPC. No diretório raiz do projeto, execute:
+
+3.  **Compile os Protocol Buffers (gRPC)**:
+    É necessário gerar o código Python a partir do arquivo `.proto`. Execute o seguinte comando no diretório raiz:
     ```bash
     python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. group_a/proto/group_comm.proto
     ```
 
-## Execução
+### Executando a Simulação
 
-A simulação requer a execução de múltiplos processos simultaneamente, cada um em seu próprio terminal. Para o Grupo B (Pyro5), é necessário iniciar o servidor de nomes primeiro.
+Para executar a simulação, você precisará abrir múltiplos terminais. O sistema foi projetado para ter 3 nós em cada grupo.
 
-### Passo 1: Iniciar o Servidor de Nomes do Pyro5
-
-Abra um terminal e execute:
-
+**1. Inicie o Servidor de Nomes (Pyro5)**
+Este passo é essencial para o Grupo B. Abra um terminal e execute:
 ```bash
 pyro5-ns
-````
 
-Mantenha este terminal aberto durante toda a simulação.
+Mantenha este processo em execução.
 
-### Passo 2: Iniciar os Nós do Grupo A
+2. Inicie os Nós do Grupo A (gRPC)
+Abra três terminais e execute um nó em cada um:
+Bash
 
-O projeto exige 2 grupos de processos com 3 nós cada. Abra 3 terminais separados. Em cada um, execute um nó do Grupo A com seu respectivo ID:
-
-```bash
 # Terminal 1
 python group_a/node_a.py 1
 
@@ -73,13 +90,11 @@ python group_a/node_a.py 2
 
 # Terminal 3
 python group_a/node_a.py 3
-```
 
-### Passo 3: Iniciar os Nós do Grupo B
+3. Inicie os Nós do Grupo B (Pyro5)
+Abra mais três terminais para os nós do Grupo B:
+Bash
 
-Abra mais 3 terminais separados. Em cada um, execute um nó do Grupo B:
-
-```bash
 # Terminal 4
 python group_b/node_b.py 4
 
@@ -88,34 +103,13 @@ python group_b/node_b.py 5
 
 # Terminal 6
 python group_b/node_b.py 6
-```
 
-### Observando a Simulação
+Como Simular Falhas
 
-  - **Eleição Inicial**: Os nós irão iniciar e, após um tempo, detectarão a "falha" do líder padrão e iniciarão um processo de eleição.
-  - **Comunicação**: Os nós não-líderes enviarão mensagens periodicamente para seus respectivos líderes.
-  - **Detecção de Falhas**: Para simular uma falha do líder, finalize o processo do nó líder (por exemplo, `Ctrl+C` no terminal do líder). Os outros nós do grupo detectarão a ausência de heartbeats e iniciarão uma nova eleição automaticamente, conforme o requisito.
+Para testar a tolerância a falhas do sistema, você pode simular a queda de um líder.
 
-## Componentes Implementados
+    Identifique o terminal onde o nó líder de um dos grupos está sendo executado (inicialmente, será o nó de ID mais alto: 3 para o Grupo A e 6 para o Grupo B).
 
-  - **Comunicação Multigrupo**:
-      - Comunicação intra-grupo: Implementada via Sockets TCP, utilizados implicitamente pelas bibliotecas gRPC e Pyro5.
-      - Comunicação inter-grupo: A estrutura para UDP Multicast está pronta no módulo `common/multicast.py`.
-  - **Middleware Híbrido**:
-      - Grupo A: Comunicação baseada em gRPC.
-      - Grupo B: Comunicação baseada em Pyro5 (alternativa a RMI).
-  - **Sincronização**: Todos os processos usam relógios de Lamport para marcação de eventos.
-  - **Liderança e Orquestração**:
-      - Grupo A: Implementado o algoritmo de eleição de líder Bully.
-      - Grupo B: Implementado o algoritmo de eleição de líder de Anel.
-  - **Detecção de Falhas**:
-      - Implementado um mecanismo de heartbeat entre os nós.
-      - Após 3 falhas consecutivas, um nó é considerado inativo, e se for o líder, uma nova eleição é acionada.
-  - **Políticas de Acesso**:
-      - Desenvolvido um sistema de controle de acesso baseado em autenticação por token. O módulo `common/auth.py` implementa a geração e validação de tokens com tempo de expiração
-  - **Código-Fonte Estruturado**: O projeto está modularizado e este README serve como documentação e instrução de execução.
+    Finalize o processo nesse terminal (usando Ctrl+C).
 
-<!-- end list -->
-
-```
-```
+    Observe os outros terminais do mesmo grupo. Os nós subordinados detectarão a ausência de heartbeats e iniciarão automaticamente um novo processo de eleição para escolher um novo líder.
