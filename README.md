@@ -1,115 +1,56 @@
-Markdown
-
 # Simulação Avançada de Sistema Distribuído Híbrido
 
-Este projeto é uma simulação acadêmica de um sistema distribuído complexo, projetado para explorar conceitos avançados de comunicação, liderança, tolerância a falhas e segurança em ambientes distribuídos. A arquitetura implementa um modelo híbrido, onde dois grupos de nós operam com diferentes tecnologias de middleware e algoritmos de eleição, coordenados para funcionar como um sistema coeso.
+Este projeto é uma simulação acadêmica de um sistema distribuído híbrido (Grupo A = gRPC, Grupo B = Pyro5). Recentes mudanças no protocolo gRPC (arquivo group_a/proto/group_comm.proto) renomearam serviços e mensagens — veja instruções de recompilação abaixo.
 
-## Conceitos e Tecnologias Implementadas
+Principais mudanças no .proto
+- Serviço renomeado: GroupComms -> GroupAService
+- Mensagem renomeada: VictoryMessage -> NewLeaderMessage
+- Field novo em MessageRequest: client_version (string)
+- Após alterar o .proto, é obrigatório regenerar os arquivos Python gerados pelo protoc.
 
-- **Middleware Híbrido**:
-    - [cite_start]**Grupo A**: Utiliza **gRPC** para comunicação de alta performance baseada em RPCs. [cite: 38]
-    - [cite_start]**Grupo B**: Utiliza **Pyro5** para uma abordagem flexível de RMI (Remote Method Invocation). [cite: 39]
-- **Algoritmos de Eleição de Líder**:
-    - [cite_start]**Grupo A**: Implementa o algoritmo **Bully**, onde nós com IDs mais altos se impõem como líderes. [cite: 59]
-    - [cite_start]**Grupo B**: Implementa o algoritmo em **Anel**, onde uma mensagem de eleição circula entre os nós para determinar o novo líder. [cite: 60]
-- **Sincronização Temporal**:
-    - [cite_start]Todos os eventos e mensagens no sistema são marcados com o tempo lógico utilizando **Relógios de Lamport**, garantindo uma ordenação causal parcial dos eventos. [cite: 35]
-- **Detecção de Falhas e Tolerância**:
-    - [cite_start]Um mecanismo de **Heartbeat** é usado para monitorar a atividade dos líderes. [cite: 66]
-    - [cite_start]O sistema reage automaticamente a falhas, acionando um novo processo de eleição após 3 falhas de heartbeat consecutivas. [cite: 67, 68]
-- **Segurança e Autenticação**:
-    - [cite_start]A comunicação é protegida por um sistema de **autenticação baseado em token JWT**, com tempo de expiração para validar as sessões. [cite: 73, 74]
-- **Comunicação Multigrupo**:
-    - [cite_start]**Intra-grupo**: A comunicação dentro de cada grupo é gerenciada pelas respectivas tecnologias de middleware (gRPC e Pyro5). [cite: 33]
-    - [cite_start]**Inter-grupo**: A infraestrutura para comunicação entre os grupos via **UDP Multicast** está implementada em `common/multicast.py`. [cite: 34]
+Passos de preparação (obrigatório antes de executar qualquer nó do Grupo A)
+1. Gere/regenere os arquivos Python a partir do .proto:
+   ```bash
+   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. group_a/proto/group_comm.proto
+   ```
+   Isso sobrescreverá:
+   - group_a/proto/group_comm_pb2.py
+   - group_a/proto/group_comm_pb2_grpc.py
 
-## Estrutura dos Diretórios
+2. Verifique que os arquivos gerados contêm:
+   - service GroupAService {...}
+   - message NewLeaderMessage { int32 leader_id = 1; }
+   - message MessageRequest inclui client_version
 
-O projeto está organizado de forma modular para separar as responsabilidades de cada componente:
+3. Em seguida, inicie os nós do Grupo A (ex.: em terminais separados):
+   ```bash
+   python group_a/node_a.py 1
+   python group_a/node_a.py 2
+   python group_a/node_a.py 3
+   ```
+   Observação: node_a.py já foi atualizado para usar os novos nomes (GroupAService, NewLeaderMessage). Se você modificar o .proto novamente, repita o passo 1.
 
-.
-├── common/             # Módulos compartilhados (lógica de Lamport, autenticação, etc.)
-│   ├── auth.py
-│   └── lamport_clock.py
-├── group_a/            # Implementação do Grupo A (gRPC e Bully)
-│   ├── node_a.py
-│   └── proto/
-│       ├── group_comm.proto
-│       ├── group_comm_pb2.py
-│       └── group_comm_pb2_grpc.py
-├── group_b/            # Implementação do Grupo B (Pyro5 e Anel)
-│   └── node_b.py
-├── config.py           # Arquivo de configuração central
-├── requirements.txt    # Dependências do projeto
-└── README.md           # Esta documentação
+Execução completa (resumo)
+1. Inicie o servidor de nomes Pyro5 (necessário para Grupo B):
+   ```bash
+   pyro5-ns
+   ```
+2. Inicie os nós do Grupo A (gRPC) — veja comandos acima.
+3. Inicie os nós do Grupo B (Pyro5):
+   ```bash
+   python group_b/node_b.py 4
+   python group_b/node_b.py 5
+   python group_b/node_b.py 6
+   ```
 
+Notas rápidas
+- O relógio lógico (Lamport) é usado para timestamps em todas as mensagens.
+- Há mecanismo de heartbeat e eleição (Bully para Grupo A; Anel para Grupo B).
+- Autenticação básica via JWT está disponível em common/auth.py; ajuste SECRET_KEY e TTL em config.py conforme necessário.
 
-## Guia de Instalação e Execução
-
-### Pré-requisitos
-- Python 3.8 ou superior.
-- As bibliotecas listadas no arquivo `requirements.txt`.
-
-### Passos para Instalação
-
-1.  **Clone o Repositório**:
-    Faça o download de todos os arquivos mantendo a estrutura de diretórios acima.
-
-2.  **Instale as Dependências**:
-    Navegue até o diretório raiz do projeto e execute:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3.  **Compile os Protocol Buffers (gRPC)**:
-    É necessário gerar o código Python a partir do arquivo `.proto`. Execute o seguinte comando no diretório raiz:
-    ```bash
-    python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. group_a/proto/group_comm.proto
-    ```
-
-### Executando a Simulação
-
-Para executar a simulação, você precisará abrir múltiplos terminais. O sistema foi projetado para ter 3 nós em cada grupo.
-
-**1. Inicie o Servidor de Nomes (Pyro5)**
-Este passo é essencial para o Grupo B. Abra um terminal e execute:
+Se detectar erros de compatibilidade gRPC após regenerar os arquivos, atualize o pacote grpc/tools:
 ```bash
-pyro5-ns
+pip install --upgrade grpcio grpcio-tools
+```
 
-Mantenha este processo em execução.
-
-2. Inicie os Nós do Grupo A (gRPC)
-Abra três terminais e execute um nó em cada um:
-Bash
-
-# Terminal 1
-python group_a/node_a.py 1
-
-# Terminal 2
-python group_a/node_a.py 2
-
-# Terminal 3
-python group_a/node_a.py 3
-
-3. Inicie os Nós do Grupo B (Pyro5)
-Abra mais três terminais para os nós do Grupo B:
-Bash
-
-# Terminal 4
-python group_b/node_b.py 4
-
-# Terminal 5
-python group_b/node_b.py 5
-
-# Terminal 6
-python group_b/node_b.py 6
-
-Como Simular Falhas
-
-Para testar a tolerância a falhas do sistema, você pode simular a queda de um líder.
-
-    Identifique o terminal onde o nó líder de um dos grupos está sendo executado (inicialmente, será o nó de ID mais alto: 3 para o Grupo A e 6 para o Grupo B).
-
-    Finalize o processo nesse terminal (usando Ctrl+C).
-
-    Observe os outros terminais do mesmo grupo. Os nós subordinados detectarão a ausência de heartbeats e iniciarão automaticamente um novo processo de eleição para escolher um novo líder.
+Mantenha o passo de recompilação como parte do seu fluxo de desenvolvimento sempre que editar `group_a/proto/group_comm.proto`.
