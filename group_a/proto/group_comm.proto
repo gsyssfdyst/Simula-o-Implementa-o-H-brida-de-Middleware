@@ -1,0 +1,47 @@
+// group_a/proto/group_comm.proto
+syntax = "proto3";
+
+package group_a;
+
+service GroupComms {
+    // Comunicação geral
+    rpc SendMessage(MessageRequest) returns (MessageReply);
+
+    // Algoritmo de Eleição Bully
+    rpc Election(ElectionMessage) returns (ResponseMessage);
+    rpc Victory(VictoryMessage) returns (ResponseMessage);
+    
+    // Heartbeat
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message MessageRequest {
+    int32 sender_id = 1;
+    string message = 2;
+    int64 lamport_time = 3;
+}
+
+message MessageReply {
+    string response = 1;
+    int64 lamport_time = 2;
+}
+
+message ElectionMessage {
+    int32 candidate_id = 1;
+}
+
+message VictoryMessage {
+    int32 leader_id = 1;
+}
+
+message ResponseMessage {
+    bool success = 1;
+}
+
+message HeartbeatRequest {
+    int32 node_id = 1;
+}
+
+message HeartbeatResponse {
+    bool alive = 1;
+}
