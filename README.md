@@ -1,0 +1,1 @@
+# Simula-o-Implementa-o-H-brida-de-Middleware
